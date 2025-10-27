@@ -3,9 +3,10 @@
 This repository implements a workflow/screening engine with human-in-the-loop, event waits, and barrier fan-in using Bun 1.1+ and strict TypeScript.
 
 ## Quickstart
-- copy `.env.example` → `.env` and adjust as needed
+- copy `.env.example` -> `.env` and adjust as needed
+- choose a storage backend (see Storage Options) and export the required environment variables
 - `bun install`
-- Provision Postgres and apply migrations: `psql "$DATABASE_URL" -f src/sql/001_tables.sql`
+- optionally run migrations up front with `bun run migrate` (they also execute on boot unless disabled)
 - `bun dev` (listens on `:3000`)
 
 ### Example walkthrough
@@ -59,13 +60,27 @@ curl -XPOST :3000/events/payment.confirmed/u-1 \
 curl :3000/instances/<instanceId>
 ```
 
+## Storage Options
+- `memory` (default) keeps all workflow state in-process and requires no additional configuration; ideal for tests and ephemeral development runs.
+- `postgres` persists state to Postgres; set `WORKFLOW_STORAGE=postgres` (or define `DATABASE_URL`) and supply a connection string.
+- `pglite` uses the embedded `@electric-sql/pglite` engine; set `WORKFLOW_STORAGE=pglite` and point `PGLITE_DATA_PATH` at a writable directory if you want on-disk persistence (omitting the path keeps the database in-memory).
+
+## Database Migrations
+- Migrations run automatically at startup when `RUN_MIGRATIONS_ON_BOOT` is `true` (default).
+- Trigger migrations manually with `bun run migrate` or `make migrate`; set `MIGRATION_PATH` to override the SQL file (defaults to `src/sql/001_tables.sql`).
+- Postgres runs require `DATABASE_URL`; PGlite runs honour `PGLITE_DATA_PATH` if provided.
+
 ## Environment
-- `DATABASE_URL` - Postgres connection string (postgres.js driver). If absent, the engine falls back to in-memory storage for development/tests.
+- `WORKFLOW_STORAGE` - choose `memory`, `postgres`, or `pglite`; defaults to `memory` unless `DATABASE_URL` is defined.
+- `DATABASE_URL` - Postgres connection string (postgres.js driver). Required when `WORKFLOW_STORAGE=postgres`.
+- `PGLITE_DATA_PATH` - optional filesystem path for the embedded PGlite database; omitted value keeps data in-memory.
+- `RUN_MIGRATIONS_ON_BOOT` - set to `false` to skip automatic migrations at startup (defaults to `true`).
+- `MIGRATION_PATH` - absolute or relative path to the SQL migration file (defaults to `src/sql/001_tables.sql`).
 - `PORT` - HTTP listen port (default `3000`). AJV schema bundle is validated at boot; missing/invalid schemas cause startup failure.
 
 ## Docker & Makefile
 - `docker compose up -d` (or `make up`) brings up the API and Postgres (`docker compose logs -f app` to tail logs).
-- `make migrate` runs the schema migration inside the Postgres container.
+- `make migrate` executes the Bun migration runner against the configured backend.
 - `make clean` tears down containers and volumes; `make docker-build` produces a production image via the included `Dockerfile`.
 
 ## Tests
