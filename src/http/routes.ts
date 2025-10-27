@@ -12,6 +12,7 @@ import {
 } from './dto';
 import { IdempotencyCache } from '../util/idempotency';
 import { ExecutionMetrics, Task } from '../types';
+import { treeifyError } from 'zod';
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -286,7 +287,11 @@ export function registerRoutes(app: Hono, manager: EngineManager): Hono {
   app.post('/events/:topic/:key', async (c) => {
     const idempotencyKey = requireIdempotencyKey(c);
     if (typeof idempotencyKey !== 'string') return idempotencyKey;
-    const params = EventPath.parse({ topic: c.req.param('topic'), key: c.req.param('key') });
+    const validation = EventPath.safeParse({ topic: c.req.param('topic'), key: c.req.param('key') });
+    if (!validation.success) {
+      return c.json({ message: 'Invalid path parameters', errors: treeifyError(validation.error) }, 400);
+    }
+    const params = validation.data;
     const body = await readJson(c, EventBody);
     const result = await eventCache.execute(idempotencyKey, async () =>
       manager.notifyEvent(params.topic, params.key, (body as any) ?? {})

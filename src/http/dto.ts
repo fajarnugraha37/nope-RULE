@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const JsonValue: z.ZodType<unknown> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValue), z.record(JsonValue)])
+  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValue), z.record(z.string(), JsonValue)])
 );
 
 export const StartWorkflowBody = JsonValue;
