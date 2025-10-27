@@ -2,6 +2,9 @@
   "name": "nope-rule",
   "module": "app/index.ts",
   "type": "module",
+  "scripts": {
+    "start": "bun run app/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
