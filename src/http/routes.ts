@@ -1,19 +1,183 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { Engine, EngineResult } from '../engine/engine';
+import { EngineManager, EngineResult } from '../engine/engine';
 import {
   EventBody,
   EventPath,
   PathWithId,
   StartWorkflowBody,
+  WorkflowUploadBody,
   TaskQuery,
   TaskSubmitBody
 } from './dto';
 import { IdempotencyCache } from '../util/idempotency';
-import { storage } from '../engine/storage';
 import { ExecutionMetrics, Task } from '../types';
 
 const MAX_BODY_BYTES = 256 * 1024;
+
+const UI_HTML = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Workflow Engine UI</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #f6f6f6; }
+    section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    textarea, input { width: 100%; font-family: monospace; margin-top: 0.5rem; box-sizing: border-box; }
+    button { margin-top: 0.5rem; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #556cd6; background: #556cd6; color: #fff; cursor: pointer; }
+    button:hover { background: #4350b5; }
+    h1 { margin-bottom: 1.5rem; }
+    .log { white-space: pre-wrap; background: #111; color: #0f0; padding: 1rem; border-radius: 8px; min-height: 120px; overflow: auto; }
+    form > label { display: block; margin-top: 0.75rem; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Workflow Engine Playground</h1>
+
+  <section>
+    <h2>Upload Rule Set</h2>
+    <textarea id="ruleset-input" rows="10" placeholder="Paste workflow JSON"></textarea>
+    <button type="button" onclick="uploadRuleSet()">Upload / Replace</button>
+  </section>
+
+  <section>
+    <h2>Start Workflow</h2>
+    <label>Flow Name<input id="flow-name" value="onboarding_v1" /></label>
+    <label>Payload JSON<textarea id="start-payload" rows="6">{ "user": { "id": "ui-user" }, "flags": { "optionalFormRequired": true } }</textarea></label>
+    <button type="button" onclick="startWorkflow()">Start</button>
+  </section>
+
+  <section>
+    <h2>Submit Task</h2>
+    <label>Task ID<input id="task-id" /></label>
+    <label>Payload JSON<textarea id="task-payload" rows="4">{}</textarea></label>
+    <button type="button" onclick="submitTask()">Submit</button>
+  </section>
+
+  <section>
+    <h2>Send Event</h2>
+    <label>Topic<input id="event-topic" placeholder="check.kyc" /></label>
+    <label>Key<input id="event-key" placeholder="ui-user" /></label>
+    <label>Payload JSON<textarea id="event-payload" rows="4">{}</textarea></label>
+    <button type="button" onclick="sendEvent()">Send Event</button>
+  </section>
+
+  <section>
+    <h2>Inspect</h2>
+    <div class="grid">
+      <div>
+        <label>Assignee<input id="tasks-assignee" placeholder="assignee" /></label>
+        <button type="button" onclick="listTasks()">List Tasks</button>
+      </div>
+      <div>
+        <label>Instance ID<input id="instance-id" /></label>
+        <button type="button" onclick="describeInstance()">Describe Instance</button>
+      </div>
+      <div>
+        <label>Flow<input id="describe-flow" placeholder="onboarding_v1" /></label>
+        <button type="button" onclick="describeFlow()">Describe Flow</button>
+      </div>
+      <div>
+        <button type="button" onclick="listFlows()">List Flows</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Logs</h2>
+    <div id="log" class="log"></div>
+  </section>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(message) {
+      const time = new Date().toISOString();
+      logEl.textContent = '[' + time + ']\\n' + message + '\\n\\n' + logEl.textContent;
+    }
+
+    async function uploadRuleSet() {
+      try {
+        const body = JSON.parse(document.getElementById('ruleset-input').value || '{}');
+        const res = await fetch('/workflows', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        log(JSON.stringify(await res.json(), null, 2));
+      } catch (err) {
+        log(err.message);
+      }
+    }
+
+    async function startWorkflow() {
+      await postWithIdempotency(
+        '/workflows/' + document.getElementById('flow-name').value + '/start',
+        document.getElementById('start-payload').value,
+        'ui-start-' + crypto.randomUUID()
+      );
+    }
+
+    async function submitTask() {
+      await postWithIdempotency(
+        '/tasks/' + document.getElementById('task-id').value + '/submit',
+        document.getElementById('task-payload').value,
+        'ui-task-' + crypto.randomUUID()
+      );
+    }
+
+    async function sendEvent() {
+      const topic = document.getElementById('event-topic').value;
+      const key = document.getElementById('event-key').value;
+      await postWithIdempotency(
+        '/events/' + topic + '/' + key,
+        document.getElementById('event-payload').value,
+        'ui-event-' + crypto.randomUUID()
+      );
+    }
+
+    async function listTasks() {
+      const assignee = document.getElementById('tasks-assignee').value;
+      const res = await fetch('/tasks?assignee=' + encodeURIComponent(assignee));
+      log(JSON.stringify(await res.json(), null, 2));
+    }
+
+    async function describeInstance() {
+      const id = document.getElementById('instance-id').value;
+      const res = await fetch('/instances/' + id);
+      log(JSON.stringify(await res.json(), null, 2));
+    }
+
+    async function describeFlow() {
+      const flow = document.getElementById('describe-flow').value;
+      const res = await fetch('/workflows/' + flow);
+      log(JSON.stringify(await res.json(), null, 2));
+    }
+
+    async function listFlows() {
+      const res = await fetch('/workflows');
+      log(JSON.stringify(await res.json(), null, 2));
+    }
+
+    async function postWithIdempotency(path, payloadText, key) {
+      try {
+        const body = JSON.parse(payloadText || '{}');
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'Idempotency-Key': key
+          },
+          body: JSON.stringify(body)
+        });
+        log(JSON.stringify(await res.json(), null, 2));
+      } catch (err) {
+        log(err.message);
+      }
+    }
+  </script>
+</body>
+</html>`;
 
 type PublicTask = {
   id: string;
@@ -56,7 +220,31 @@ const startCache = new IdempotencyCache<PublicEngineResult>();
 const submitCache = new IdempotencyCache<PublicEngineResult>();
 const eventCache = new IdempotencyCache<PublicEngineResult | undefined>();
 
-export function registerRoutes(app: Hono, engine: Engine): Hono {
+export function registerRoutes(app: Hono, manager: EngineManager): Hono {
+  app.get('/', (c) => c.html(UI_HTML));
+
+  app.post('/workflows', async (c) => {
+    const body = await readJson(c, WorkflowUploadBody);
+    const summary = manager.registerRuleSet(body as any);
+    return c.json(summary, 201);
+  });
+
+  app.get('/workflows', (c) => {
+    return c.json({
+      workflows: manager.listFlows()
+    });
+  });
+
+  app.get('/workflows/:name', (c) => {
+    const name = c.req.param('name');
+    try {
+      const description = manager.describeFlow(name);
+      return c.json(description);
+    } catch (err) {
+      return c.json({ message: (err as Error).message }, 404);
+    }
+  });
+
   app.post('/workflows/:name/start', async (c) => {
     const idempotencyKey = requireIdempotencyKey(c);
     if (typeof idempotencyKey !== 'string') return idempotencyKey;
@@ -64,14 +252,14 @@ export function registerRoutes(app: Hono, engine: Engine): Hono {
     const body = await readJson(c, StartWorkflowBody);
 
     const result = await startCache.execute(idempotencyKey, async () =>
-      toPublicEngineResult(await engine.startInstance(name, (body as any) ?? {}))
+      toPublicEngineResult(await manager.startInstance(name, (body as any) ?? {}))
     );
     return c.json(result);
   });
 
   app.get('/tasks', async (c) => {
     const query = TaskQuery.parse(c.req.query());
-    const tasks = await storage.listTasksByAssignee(query.assignee);
+    const tasks = await manager.listTasksByAssignee(query.assignee);
     return c.json({
       tasks: tasks.map((task) => ({
         id: task.id,
@@ -90,7 +278,7 @@ export function registerRoutes(app: Hono, engine: Engine): Hono {
     const { id } = PathWithId.parse({ id: c.req.param('id') });
     const body = await readJson(c, TaskSubmitBody);
     const result = await submitCache.execute(idempotencyKey, async () =>
-      toPublicEngineResult(await engine.resumeWithForm(id, (body as any) ?? {}))
+      toPublicEngineResult(await manager.resumeWithForm(id, (body as any) ?? {}))
     );
     return c.json(result);
   });
@@ -101,7 +289,7 @@ export function registerRoutes(app: Hono, engine: Engine): Hono {
     const params = EventPath.parse({ topic: c.req.param('topic'), key: c.req.param('key') });
     const body = await readJson(c, EventBody);
     const result = await eventCache.execute(idempotencyKey, async () =>
-      engine.notifyEvent(params.topic, params.key, (body as any) ?? {})
+      manager.notifyEvent(params.topic, params.key, (body as any) ?? {})
     );
     if (!result) {
       return c.json({ status: 'IGNORED' }, 202);
@@ -112,7 +300,7 @@ export function registerRoutes(app: Hono, engine: Engine): Hono {
   app.get('/instances/:id', async (c) => {
     const { id } = PathWithId.parse({ id: c.req.param('id') });
     try {
-      const snapshot = await engine.getInstanceStatus(id);
+      const snapshot = await manager.getInstanceStatus(id);
       return c.json(toInstanceSummary(snapshot));
     } catch {
       return c.json({ message: 'Not Found' }, 404);
@@ -169,7 +357,7 @@ function toPublicTask(task?: Task): PublicTask | undefined {
   };
 }
 
-function toInstanceSummary(snapshot: Awaited<ReturnType<Engine['getInstanceStatus']>>): InstanceSummary {
+function toInstanceSummary(snapshot: Awaited<ReturnType<EngineManager['getInstanceStatus']>>): InstanceSummary {
   const { context } = snapshot;
   const summary: InstanceSummary['summary'] = {};
   const forms = summarizeForms(context);

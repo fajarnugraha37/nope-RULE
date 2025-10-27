@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
 import { registerRoutes } from '../src/http/routes';
-import { createTestEngine } from './helpers/factory';
+import { createTestManager } from './helpers/factory';
 
 function setupApp() {
-  const { engine } = createTestEngine();
+  const { manager } = createTestManager();
   const app = new Hono();
-  registerRoutes(app, engine);
-  return { app, engine };
+  registerRoutes(app, manager);
+  return { app, manager };
 }
 
 async function postJson(
@@ -103,6 +103,51 @@ describe('HTTP routes', () => {
     expect(instanceJson.summary.forms.submit.status).toBe('SUBMITTED');
     expect(instanceJson.summary.barriers.pending_checks.pendingTopics).toHaveLength(0);
     expect(instanceJson.summary.forms.submit).not.toHaveProperty('payload');
+  });
+
+  it('registers and describes workflows via API', async () => {
+    const { app } = setupApp();
+    const uploadBody = {
+      name: 'test_ruleset',
+      version: '1.0.0',
+      flows: {
+        simple_flow: {
+          name: 'simple_flow',
+          entry: 'start',
+          nodes: [
+            { id: 'start', type: 'MERGE', sources: [] }
+          ],
+          edges: []
+        }
+      }
+    };
+    const uploadRes = await app.request('/workflows', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(uploadBody)
+    });
+    expect(uploadRes.status).toBe(201);
+    const uploadJson = await uploadRes.json();
+    expect(uploadJson.flows).toContain('simple_flow');
+
+    const listRes = await app.request('/workflows');
+    const listJson = await listRes.json();
+    const hasFlow = listJson.workflows.some((flow: any) => flow.name === 'simple_flow');
+    expect(hasFlow).toBeTrue();
+
+    const describeRes = await app.request('/workflows/simple_flow');
+    expect(describeRes.status).toBe(200);
+    const describeJson = await describeRes.json();
+    expect(describeJson.definition.entry).toBe('start');
+    expect(describeJson.ruleSet.name).toBe('test_ruleset');
+  });
+
+  it('serves HTML UI', async () => {
+    const { app } = setupApp();
+    const res = await app.request('/');
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const text = await res.text();
+    expect(text).toContain('<title');
   });
 
   it('rejects missing Idempotency-Key', async () => {

@@ -6,6 +6,8 @@ const JsonValue: z.ZodType<unknown> = z.lazy(() =>
 
 export const StartWorkflowBody = JsonValue;
 
+export const WorkflowUploadBody = JsonValue;
+
 export const TaskSubmitBody = JsonValue;
 
 export const EventBody = JsonValue;

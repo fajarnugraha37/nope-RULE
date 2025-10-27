@@ -6,6 +6,7 @@ import {
   WorkflowStatus,
   FlowNode,
   FlowEdge,
+  FlowDefinition,
   JsonObject,
   HumanFormNode,
   WaitEventNode,
@@ -15,7 +16,7 @@ import {
 } from '../types';
 import { validateRuleSet, validateBySchemaRef } from '../validation';
 import { Timeline } from '../timeline';
-import { storage, EngineStorage, NodeRunHandle } from './storage';
+import { EngineStorage, NodeRunHandle } from './storage';
 import { evaluateDecisionTable } from './nodes/table';
 import { runExprNode } from './nodes/expr';
 import { createHumanTask } from './nodes/human';
@@ -76,10 +77,24 @@ export class Engine {
   private readonly instances = new Map<string, InstanceState>();
   private readonly waitIndex = new Map<string, { instanceId: string; nodeId: string }>();
   private readonly barrierIndex = new Map<string, { instanceId: string; nodeId: string }>();
+  private readonly ruleSet: RuleSet;
 
-  constructor(compiled: CompiledRuleSet, storageImpl: EngineStorage = storage) {
+  constructor(compiled: CompiledRuleSet, storageImpl: EngineStorage) {
     this.compiled = compiled;
     this.storage = storageImpl;
+    this.ruleSet = compiled.ruleSet;
+  }
+
+  getRuleSetMeta(): { name: string; version: string } {
+    return { name: this.ruleSet.name, version: this.ruleSet.version };
+  }
+
+  listFlows(): string[] {
+    return [...this.compiled.flows.keys()];
+  }
+
+  getFlowDefinition(flowName: string): FlowDefinition {
+    return this.getFlow(flowName).definition;
   }
 
   async startInstance(flowName: string, input: JsonObject): Promise<EngineResult> {
@@ -584,20 +599,141 @@ export class Engine {
   }
 }
 
+export interface FlowSummary {
+  name: string;
+  ruleSet: { name: string; version: string };
+}
+
+export interface FlowDescription extends FlowSummary {
+  definition: FlowDefinition;
+}
+
 export class EngineManager {
-  static load(ruleSetJson: unknown): Engine {
+  public readonly engines = new Map<string, Engine>();
+  public readonly flowToEngine = new Map<string, string>();
+  public readonly instanceToEngine = new Map<string, string>();
+
+  constructor(private readonly storage: EngineStorage) {}
+
+  registerRuleSet(ruleSetJson: unknown): { ruleSet: string; version: string; flows: string[] } {
     validateRuleSet(ruleSetJson);
     const compiled = compileRuleSet(ruleSetJson as RuleSet);
-    return new Engine(compiled);
+    const engineKey = `${compiled.ruleSet.name}@${compiled.ruleSet.version}`;
+    const engine = new Engine(compiled, this.storage);
+
+    // Remove any existing flow mapping owned by this engine key
+    for (const [flowName, key] of Array.from(this.flowToEngine.entries())) {
+      if (key === engineKey) {
+        this.flowToEngine.delete(flowName);
+      }
+    }
+
+    this.engines.set(engineKey, engine);
+    const flows = engine.listFlows();
+    for (const flowName of flows) {
+      this.flowToEngine.set(flowName, engineKey);
+    }
+
+    return {
+      ruleSet: compiled.ruleSet.name,
+      version: compiled.ruleSet.version,
+      flows
+    };
   }
-}
 
-function deepClone<T>(value: T): T {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
-}
+  listFlows(): FlowSummary[] {
+    const results: FlowSummary[] = [];
+    for (const [flowName, engineKey] of this.flowToEngine.entries()) {
+      const engine = this.engines.get(engineKey);
+      if (!engine) continue;
+      results.push({ name: flowName, ruleSet: engine.getRuleSetMeta() });
+    }
+    return results;
+  }
 
-function composeKey(topic: string, key: string): string {
-  return `${topic}::${key}`;
+  describeFlow(flowName: string): FlowDescription {
+    const engine = this.getEngineForFlow(flowName);
+    return {
+      name: flowName,
+      ruleSet: engine.getRuleSetMeta(),
+      definition: deepClone(engine.getFlowDefinition(flowName))
+    };
+  }
+
+  async startInstance(flowName: string, input: JsonObject): Promise<EngineResult> {
+    const engineKey = this.flowToEngine.get(flowName);
+    if (!engineKey) {
+      throw new Error(`Flow '${flowName}' is not registered`);
+    }
+    const engine = this.engines.get(engineKey);
+    if (!engine) {
+      throw new Error(`Engine for flow '${flowName}' is not available`);
+    }
+    const result = await engine.startInstance(flowName, input);
+    this.updateInstanceMapping(engineKey, result);
+    return result;
+  }
+
+  async resumeWithForm(taskId: string, payload: JsonObject): Promise<EngineResult> {
+    const task = await this.storage.getTask(taskId);
+    if (!task) {
+      throw new Error(`Task '${taskId}' not found`);
+    }
+    const engineKey = this.ensureEngineForInstance(task.workflowInstanceId);
+    const engine = this.engines.get(engineKey)!;
+    const result = await engine.resumeWithForm(taskId, payload);
+    this.updateInstanceMapping(engineKey, result);
+    return result;
+  }
+
+  async notifyEvent(topic: string, key: string, payload: JsonObject): Promise<EngineResult | undefined> {
+    for (const [engineKey, engine] of this.engines.entries()) {
+      const result = await engine.notifyEvent(topic, key, payload);
+      if (result) {
+        this.updateInstanceMapping(engineKey, result);
+        return result;
+      }
+    }
+    return undefined;
+  }
+
+  async getInstanceStatus(instanceId: string) {
+    const engineKey = this.ensureEngineForInstance(instanceId);
+    const engine = this.engines.get(engineKey)!;
+    return engine.getInstanceStatus(instanceId);
+  }
+
+  private getEngineForFlow(flowName: string): Engine {
+    const engineKey = this.flowToEngine.get(flowName);
+    if (!engineKey) {
+      throw new Error(`Flow '${flowName}' is not registered`);
+    }
+    const engine = this.engines.get(engineKey);
+    if (!engine) {
+      throw new Error(`Engine for flow '${flowName}' is not available`);
+    }
+    return engine;
+  }
+
+  private ensureEngineForInstance(instanceId: string): string {
+    let engineKey = this.instanceToEngine.get(instanceId);
+    if (engineKey) return engineKey;
+    for (const [key, engine] of this.engines.entries()) {
+      if (engine.getInstanceView(instanceId)) {
+        this.instanceToEngine.set(instanceId, key);
+        return key;
+      }
+    }
+    throw new Error(`Instance '${instanceId}' is not loaded`);
+  }
+
+  private updateInstanceMapping(engineKey: string, result: EngineResult) {
+    if (result.status === 'COMPLETED' || result.status === 'FAILED') {
+      this.instanceToEngine.delete(result.instanceId);
+    } else {
+      this.instanceToEngine.set(result.instanceId, engineKey);
+    }
+  }
 }
 
 function resolveKey(context: JsonObject, path: string): unknown {
@@ -611,6 +747,10 @@ function resolveKey(context: JsonObject, path: string): unknown {
   return cursor;
 }
 
-export function loadEngineFromRuleSet(ruleSet: RuleSet): Engine {
-  return new Engine(compileRuleSet(ruleSet));
+function composeKey(topic: string, key: string): string {
+  return `${topic}::${key}`;
 }
+
+function deepClone<T>(value: T): T { 
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+} 

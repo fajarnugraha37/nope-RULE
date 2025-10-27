@@ -63,6 +63,7 @@ describe('workflow engine e2e', () => {
       )
     ).toBeLessThanOrEqual(tolerance);
     const barrierTopics = storage.getBarrierTopics?.() ?? [];
+    console.log('barrierTopics', barrierTopics);
     expect(barrierTopics.length).toBeGreaterThanOrEqual(5);
   });
 });
