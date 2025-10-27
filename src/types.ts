@@ -157,6 +157,7 @@ export interface Task {
   context: JsonObject;
   createdAt: string;
   submittedAt?: string;
+  expiresAt?: string;
 }
 
 export interface ExecutionResult {

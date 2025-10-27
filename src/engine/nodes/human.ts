@@ -14,12 +14,16 @@ export async function createHumanTask({
   node,
   context
 }: CreateHumanTaskOptions): Promise<Task> {
+  const expiresAt = node.timeoutMs
+    ? new Date(Date.now() + node.timeoutMs).toISOString()
+    : undefined;
   return storage.createTask({
     workflowInstanceId: instanceId,
     nodeId: node.id,
     formSchemaRef: node.formSchemaRef,
     status: 'OPEN',
     assignees: node.assignees,
-    context
+    context,
+    expiresAt
   });
 }

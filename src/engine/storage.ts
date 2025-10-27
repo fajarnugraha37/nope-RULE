@@ -41,6 +41,7 @@ export interface EngineStorage {
   createTask(task: Omit<Task, 'id' | 'createdAt'>): Promise<Task>;
   getTask(taskId: string): Promise<Task | undefined>;
   markTaskSubmitted(taskId: string, payload: unknown): Promise<Task | undefined>;
+  expireTask(taskId: string): Promise<void>;
   listTasksByAssignee(assignee: string): Promise<Task[]>;
   saveBarrier(instanceId: string, nodeId: string, key: string, progress: BarrierProgress): Promise<void>;
   loadBarrierByKey(topic: string, key: string): Promise<BarrierRecord | undefined>;
@@ -135,8 +136,18 @@ class InMemoryStorage implements EngineStorage {
     return entry;
   }
 
+  async expireTask(taskId: string): Promise<void> {
+    const entry = this.tasks.get(taskId);
+    if (!entry) return;
+    entry.status = 'EXPIRED';
+    entry.submittedAt = new Date().toISOString();
+    this.tasks.set(taskId, entry);
+  }
+
   async listTasksByAssignee(assignee: string): Promise<Task[]> {
-    return [...this.tasks.values()].filter((task) => task.assignees.includes(assignee));
+    return [...this.tasks.values()].filter(
+      (task) => task.assignees.includes(assignee) && task.status === 'OPEN'
+    );
   }
 
   async saveBarrier(instanceId: string, nodeId: string, key: string, progress: BarrierProgress): Promise<void> {
@@ -166,11 +177,22 @@ class InMemoryStorage implements EngineStorage {
   }
 
   async findExpiredBarriers(_now: number): Promise<BarrierRecord[]> {
-    return [];
+    const expired: BarrierRecord[] = [];
+    for (const record of this.barriers.values()) {
+      const timeout = record.progress.timeoutAt;
+      if (timeout != null && timeout <= _now && !record.progress.completed) {
+        expired.push(JSON.parse(JSON.stringify(record)));
+      }
+    }
+    return expired;
   }
 
   async findExpiredTasks(_now: number): Promise<Task[]> {
-    return [...this.tasks.values()].filter((task) => task.status === 'OPEN');
+    return [...this.tasks.values()].filter((task) => {
+      if (task.status !== 'OPEN') return false;
+      if (!task.expiresAt) return false;
+      return Date.parse(task.expiresAt) <= _now;
+    });
   }
 
   getBarrierTopics(): BarrierProgressTopic[] {
@@ -262,7 +284,7 @@ class PostgresStorage implements EngineStorage {
     const id = ulid();
     const createdAt = new Date().toISOString();
     await this.sql`
-      INSERT INTO tasks (id, instance_id, node_id, schema_ref, status, assignees, context, created_at)
+      INSERT INTO tasks (id, instance_id, node_id, schema_ref, status, assignees, context, created_at, expires_at)
       VALUES (
         ${id},
         ${task.workflowInstanceId},
@@ -271,7 +293,8 @@ class PostgresStorage implements EngineStorage {
         ${task.status},
         ${task.assignees},
         ${this.sql.json(task.context)},
-        to_timestamp(${Date.parse(createdAt)} / 1000.0)
+        to_timestamp(${Date.parse(createdAt)} / 1000.0),
+        ${task.expiresAt ? this.sql`to_timestamp(${Date.parse(task.expiresAt)} / 1000.0)` : null}
       )
     `;
     return { ...task, id, createdAt };
@@ -287,7 +310,8 @@ class PostgresStorage implements EngineStorage {
              assignees,
              context,
              to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "createdAt",
-             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt"
+             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt",
+             to_char(expires_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "expiresAt"
       FROM tasks
       WHERE id = ${taskId}
     `;
@@ -309,9 +333,19 @@ class PostgresStorage implements EngineStorage {
                 assignees,
                 context,
                 to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "createdAt",
-                to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt"
+                to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt",
+                to_char(expires_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "expiresAt"
     `;
     return rows[0];
+  }
+
+  async expireTask(taskId: string): Promise<void> {
+    await this.sql`
+      UPDATE tasks
+      SET status = 'EXPIRED',
+          submitted_at = NOW()
+      WHERE id = ${taskId}
+    `;
   }
 
   async listTasksByAssignee(assignee: string): Promise<Task[]> {
@@ -324,7 +358,8 @@ class PostgresStorage implements EngineStorage {
              assignees,
              context,
              to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "createdAt",
-             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt"
+             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt",
+             to_char(expires_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "expiresAt"
       FROM tasks
       WHERE ${assignee} = ANY(assignees) AND status = 'OPEN'
     `;
@@ -426,7 +461,8 @@ class PostgresStorage implements EngineStorage {
              assignees,
              context,
              to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "createdAt",
-             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt"
+             to_char(submitted_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "submittedAt",
+             to_char(expires_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "expiresAt"
       FROM tasks
       WHERE expires_at IS NOT NULL AND expires_at <= to_timestamp(${now} / 1000.0)
     `;

@@ -162,6 +162,28 @@ export class Engine {
   }
 
   async processTimeouts(now: number = Date.now()): Promise<void> {
+    const expiredBarrierRecords = await this.storage.findExpiredBarriers(now);
+    for (const record of expiredBarrierRecords) {
+      const instance = this.instances.get(record.instanceId);
+      if (!instance) continue;
+      const waiting = instance.waiting;
+      if (!waiting || waiting.kind !== 'BARRIER') continue;
+      if (waiting.node.id !== record.nodeId || waiting.key !== record.key) continue;
+      Object.assign(waiting.progress.received, record.progress.received);
+      waiting.progress.timeoutAt = record.progress.timeoutAt;
+      await this.handleBarrierTimeout(instance, waiting);
+    }
+
+    const expiredTasks = await this.storage.findExpiredTasks(now);
+    for (const task of expiredTasks) {
+      const instance = this.instances.get(task.workflowInstanceId);
+      if (!instance) continue;
+      const waiting = instance.waiting;
+      if (!waiting || waiting.kind !== 'HUMAN_FORM') continue;
+      if (waiting.task.id !== task.id) continue;
+      await this.handleHumanTimeout(instance, waiting);
+    }
+
     for (const instance of this.instances.values()) {
       const waiting = instance.waiting;
       if (!waiting) continue;
@@ -174,12 +196,17 @@ export class Engine {
       }
 
       if (waiting.kind === 'BARRIER' && waiting.progress.timeoutAt && waiting.progress.timeoutAt <= now) {
-        for (const input of waiting.node.barrier.inputs) {
-          this.barrierIndex.delete(composeKey(input.topic, waiting.key));
-        }
-        await this.closeWaitingNode(instance, waiting.handle, 'FAILED');
-        instance.waiting = undefined;
-        await this.runUntilWaitOrComplete(instance, waiting.timeoutTo ?? waiting.failTo);
+        await this.handleBarrierTimeout(instance, waiting);
+      }
+
+      if (
+        waiting.kind === 'HUMAN_FORM' &&
+        waiting.node.timeoutMs &&
+        waiting.node.timeoutMs > 0 &&
+        waiting.task.expiresAt &&
+        Date.parse(waiting.task.expiresAt) <= now
+      ) {
+        await this.handleHumanTimeout(instance, waiting);
       }
     }
   }
@@ -439,6 +466,46 @@ export class Engine {
     instance.waiting = undefined;
     const nextNode = outcome.passed ? waiting.passTo : waiting.failTo ?? waiting.timeoutTo;
     return this.runUntilWaitOrComplete(instance, nextNode);
+  }
+
+  private async handleBarrierTimeout(
+    instance: InstanceState,
+    waiting: Extract<WaitingState, { kind: 'BARRIER' }>
+  ): Promise<void> {
+    for (const input of waiting.node.barrier.inputs) {
+      this.barrierIndex.delete(composeKey(input.topic, waiting.key));
+    }
+    waiting.progress.completed = true;
+    waiting.progress.passed = false;
+    instance.context.barriers = instance.context.barriers ?? {};
+    instance.context.barriers[waiting.node.id] = { progress: waiting.progress } as any;
+    await this.storage.saveBarrier(instance.id, waiting.node.id, waiting.key, waiting.progress);
+    await this.closeWaitingNode(instance, waiting.handle, 'FAILED');
+    instance.waiting = undefined;
+    const nextNode = waiting.timeoutTo ?? waiting.failTo;
+    await this.runUntilWaitOrComplete(instance, nextNode);
+  }
+
+  private async handleHumanTimeout(
+    instance: InstanceState,
+    waiting: Extract<WaitingState, { kind: 'HUMAN_FORM' }>
+  ): Promise<void> {
+    await this.storage.expireTask(waiting.task.id);
+    waiting.task.status = 'EXPIRED';
+    waiting.task.submittedAt = new Date().toISOString();
+    instance.context.forms = instance.context.forms ?? {};
+    instance.context.forms[waiting.node.id] = {
+      status: 'EXPIRED',
+      taskId: waiting.task.id
+    } as any;
+    await this.closeWaitingNode(instance, waiting.handle, 'FAILED');
+    instance.waiting = undefined;
+    const timeoutEdge = this.pickEdge(instance, waiting.node, 'TIMEOUT');
+    if (timeoutEdge?.to) {
+      await this.runUntilWaitOrComplete(instance, timeoutEdge.to);
+    } else {
+      await this.completeInstance(instance, 'FAILED');
+    }
   }
 
   private waitingResult(instance: InstanceState, result: Partial<ExecutionResult>): EngineResult {
