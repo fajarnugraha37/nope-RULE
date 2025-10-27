@@ -1,0 +1,16 @@
+{
+  "name": "nope-rule",
+  "module": "app/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "jsep": "^1.4.0",
+    "json-logic-engine": "^5.0.2"
+  }
+}
