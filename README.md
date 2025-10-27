@@ -3,6 +3,7 @@
 This repository implements a workflow/screening engine with human-in-the-loop, event waits, and barrier fan-in using Bun 1.1+ and strict TypeScript.
 
 ## Quickstart
+- copy `.env.example` → `.env` and adjust as needed
 - `bun install`
 - Provision Postgres and apply migrations: `psql "$DATABASE_URL" -f src/sql/001_tables.sql`
 - `bun dev` (listens on `:3000`)
@@ -59,7 +60,13 @@ curl :3000/instances/<instanceId>
 ```
 
 ## Environment
-- `DATABASE_URL` – Postgres connection string (postgres.js driver). If absent, the engine falls back to in-memory storage for development/tests.
+- `DATABASE_URL` - Postgres connection string (postgres.js driver). If absent, the engine falls back to in-memory storage for development/tests.
+- `PORT` - HTTP listen port (default `3000`). AJV schema bundle is validated at boot; missing/invalid schemas cause startup failure.
+
+## Docker & Makefile
+- `docker compose up -d` (or `make up`) brings up the API and Postgres (`docker compose logs -f app` to tail logs).
+- `make migrate` runs the schema migration inside the Postgres container.
+- `make clean` tears down containers and volumes; `make docker-build` produces a production image via the included `Dockerfile`.
 
 ## Tests
 - `bun test` using Bun's native test runner.

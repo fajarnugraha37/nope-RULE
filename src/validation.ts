@@ -142,22 +142,32 @@ let schemasPreloaded = false;
 function preloadSchemas() {
   if (schemasPreloaded) return;
   const schemaPath = resolve(import.meta.dir, './dsl/ajv-schemas.json');
+  let raw: string;
   try {
-    const raw = readFileSync(schemaPath, 'utf8');
-    const payload = JSON.parse(raw);
-    if (payload && typeof payload === 'object') {
-      if (Array.isArray(payload)) {
-        payload.forEach((schema) => ajv.addSchema(schema));
-      } else if (Array.isArray((payload as any).schemas)) {
-        (payload as any).schemas.forEach((schema: Schema) => ajv.addSchema(schema));
-      } else {
-        Object.values(payload as Record<string, Schema>).forEach((schema) => {
-          ajv.addSchema(schema);
-        });
-      }
-    }
+    raw = readFileSync(schemaPath, 'utf8');
   } catch (err) {
-    console.warn('[validation] unable to preload schemas', err);
+    throw new Error(`[validation] failed to read schema bundle at ${schemaPath}: ${(err as Error).message}`);
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`[validation] ajv-schemas.json is not valid JSON: ${(err as Error).message}`);
+  }
+
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload)) {
+      payload.forEach((schema) => ajv.addSchema(schema));
+    } else if (Array.isArray((payload as any).schemas)) {
+      (payload as any).schemas.forEach((schema: Schema) => ajv.addSchema(schema));
+    } else {
+      Object.values(payload as Record<string, Schema>).forEach((schema) => {
+        ajv.addSchema(schema);
+      });
+    }
+  } else {
+    throw new Error('[validation] schema bundle must be an object or array');
   }
   schemasPreloaded = true;
 }
