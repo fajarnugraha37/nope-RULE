@@ -55,7 +55,7 @@ export interface EngineStorage {
   findExpiredTasks(now: number): Promise<Task[]>;
 }
 
-class InMemoryStorage implements EngineStorage {
+export class MemoryStorage implements EngineStorage {
   private instances = new Map<string, { flowName: string; context: unknown; status: string; metrics: ExecutionMetrics }>();
   private nodeRuns = new Map<string, any>();
   private tasks = new Map<string, Task>();
@@ -473,6 +473,10 @@ class PostgresStorage implements EngineStorage {
 const storage: EngineStorage =
   process.env.DATABASE_URL != null && process.env.DATABASE_URL !== ''
     ? new PostgresStorage(process.env.DATABASE_URL)
-    : new InMemoryStorage();
+    : new MemoryStorage();
+
+export function createMemoryStorage(): MemoryStorage {
+  return new MemoryStorage();
+}
 
 export { storage };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { storage } from '../src/engine/storage';
 import { createBarrierProgress } from '../src/engine/nodes/barrier';
 import { BarrierNode } from '../src/types';
+import { MemoryStorage } from '../src/engine/storage';
 
 const barrierNode: BarrierNode = {
   id: 'sweeper-barrier',
@@ -16,6 +16,7 @@ const barrierNode: BarrierNode = {
 
 describe('storage sweepers', () => {
   it('detects expired barrier progress', async () => {
+    const storage = new MemoryStorage();
     const progress = createBarrierProgress(barrierNode, 'inst-sweeper', 'key-a');
     progress.timeoutAt = Date.now() - 10;
     await storage.saveBarrier('inst-sweeper', barrierNode.id, 'key-a', progress);
@@ -25,14 +26,10 @@ describe('storage sweepers', () => {
       (record) => record.instanceId === 'inst-sweeper' && record.nodeId === barrierNode.id
     );
     expect(match).toBeDefined();
-
-    // cleanup to avoid cross-test interference
-    progress.completed = true;
-    progress.timeoutAt = Date.now() + 60_000;
-    await storage.saveBarrier('inst-sweeper', barrierNode.id, 'key-a', progress);
   });
 
   it('detects expired tasks', async () => {
+    const storage = new MemoryStorage();
     const task = await storage.createTask({
       workflowInstanceId: 'inst-task',
       nodeId: 'human-node',

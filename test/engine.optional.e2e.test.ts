@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import ruleSet from '../src/dsl/onboarding_v1.json' assert { type: 'json' };
-import { EngineManager } from '../src/engine/engine';
+import { createTestEngine } from './helpers/factory';
 
 describe('workflow engine e2e (optional path)', () => {
   it('skips initial form and exits via barrier fail path', async () => {
-    const engine = EngineManager.load(ruleSet);
+    const { engine } = createTestEngine();
     const start = await engine.startInstance('onboarding_v1', {
       user: { id: 'u-fail' },
       flags: { optionalFormRequired: false }

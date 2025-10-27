@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import ruleSet from '../src/dsl/onboarding_v1.json' assert { type: 'json' };
-import { EngineManager } from '../src/engine/engine';
-import { storage } from '../src/engine/storage';
+import { createTestEngine } from './helpers/factory';
 
 describe('workflow engine e2e', () => {
   it('start->submit->events->entity->payment->finish', async () => {
-    const engine = EngineManager.load(ruleSet);
+    const { engine, storage } = createTestEngine();
     const start = await engine.startInstance('onboarding_v1', {
       user: { id: 'u-1' },
       flags: { optionalFormRequired: true },
@@ -64,8 +62,7 @@ describe('workflow engine e2e', () => {
         snapshot.metrics.wallMsTotal - (snapshot.metrics.activeMsTotal + snapshot.metrics.waitingMsTotal)
       )
     ).toBeLessThanOrEqual(tolerance);
-
-    const barrierTopics = (storage as any).getBarrierTopics?.() ?? [];
+    const barrierTopics = storage.getBarrierTopics?.() ?? [];
     expect(barrierTopics.length).toBeGreaterThanOrEqual(5);
   });
 });

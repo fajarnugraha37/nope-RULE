@@ -135,4 +135,28 @@ describe('barrier node progression', () => {
     expect(outcome.completed).toBe(true);
     expect(outcome.passed).toBe(false);
   });
+
+  it('omits merged context when emitMerged is false', async () => {
+    const node = makeBarrierNode('ALL', { emitMerged: false });
+    const progress = createBarrierProgress(node, 'inst-1', 'key-merge');
+    const outcome = await applyBarrierEvent(
+      {
+        node,
+        key: 'key-merge',
+        topic: 'topic.a',
+        payload: { value: 1 },
+        context,
+        endedAt: 5
+      },
+      progress
+    );
+    expect(outcome.completed).toBe(false);
+    expect(outcome.mergedContext).toBeUndefined();
+  });
+
+  it('captures timeout metadata when defined', () => {
+    const node = makeBarrierNode('ALL', { timeoutMs: 5000 });
+    const progress = createBarrierProgress(node, 'inst-1', 'key-timeout');
+    expect(progress.timeoutAt).toBeGreaterThan(Date.now());
+  });
 });
