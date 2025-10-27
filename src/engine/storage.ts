@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import postgres, { Sql } from 'postgres';
 import { ulid } from 'ulid';
 import { Task, ExecutionMetrics, BarrierProgress, BarrierProgressTopic } from '../types';
 
@@ -204,15 +204,19 @@ export class MemoryStorage implements EngineStorage {
   }
 }
 
-class PostgresStorage implements EngineStorage {
-  private sql;
+export class PostgresStorage implements EngineStorage {
+  private sql: Sql;
 
-  constructor(url: string) {
-    this.sql = postgres(url, {
-      max: 5,
-      prepare: true,
-      idle_timeout: 20
-    });
+  constructor(connection: string | Sql) {
+    if (typeof connection === 'string') {
+      this.sql = postgres(connection, {
+        max: 5,
+        prepare: true,
+        idle_timeout: 20
+      });
+    } else {
+      this.sql = connection;
+    }
   }
 
   async onWorkflowStart(instanceId: string, flowName: string, context: unknown): Promise<void> {

@@ -12,6 +12,7 @@
     "migrate": "bun run src/sql/migrate.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "0.2.7",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "hono": "^4.10.3",
