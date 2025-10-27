@@ -1,7 +1,8 @@
 {
   "name": "nope-rule",
-  "module": "app/index.ts",
+  "version": "0.1.0",
   "type": "module",
+  "module": "src/index.ts",
   "scripts": {
     "compile": "bun build --compile --minify --sourcemap --bytecode ./app/index.ts",
     "compile:windows": "bun run compile --target=bun-windows-x64 --outfile out/app-windows.exe",
@@ -10,18 +11,34 @@
     "compile:darwin": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin",
     "compile:darwin:arm": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin-arm",
     "compile:all": "bun run compile:windows && bun run compile:linux && bun run compile:linux:arm && bun run compile:darwin && bun run compile:darwin:arm",
-    "start": "bun run app/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "lint": "tsc --noEmit",
+    "test": "bun test",
+    "migrate": "bun run src/sql/migrate.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.11",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "hono": "^4.10.3",
     "jsep": "^1.4.0",
-    "json-logic-engine": "^5.0.2"
+    "json-logic-engine": "^5.0.2",
+    "json-logic-js": "^2.0.5",
+    "json-schema": "^0.4.0",
+    "postgres": "^3.4.7",
+    "uid": "^2.0.2",
+    "ulid": "^3.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/json-schema": "^7.0.15",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
   }
 }

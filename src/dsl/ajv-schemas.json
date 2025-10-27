@@ -1,0 +1,95 @@
+{
+  "schemas": [
+    {
+      "$id": "https://schemas.company/forms/onboarding-user.json",
+      "type": "object",
+      "required": ["fullName", "email"],
+      "additionalProperties": false,
+      "properties": {
+        "fullName": { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" }
+      }
+    },
+    {
+      "$id": "https://schemas.company/forms/entity.json",
+      "type": "object",
+      "required": ["entityType", "documents"],
+      "additionalProperties": false,
+      "properties": {
+        "entityType": { "type": "string", "enum": ["PERSONAL", "BUSINESS"] },
+        "documents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "$id": "https://schemas.company/events/check-kyc.json",
+      "type": "object",
+      "required": ["userId", "status"],
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$id": "https://schemas.company/events/check-sanction.json",
+      "type": "object",
+      "required": ["userId", "status"],
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "listsHit": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$id": "https://schemas.company/events/check-device.json",
+      "type": "object",
+      "required": ["userId", "status"],
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "velocity": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$id": "https://schemas.company/events/check-credit.json",
+      "type": "object",
+      "required": ["userId", "status", "score"],
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "score": { "type": "integer", "minimum": 300, "maximum": 900 }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$id": "https://schemas.company/events/check-risk.json",
+      "type": "object",
+      "required": ["userId", "status"],
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PASS", "REVIEW", "FAIL"] },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$id": "https://schemas.company/events/payment-confirmed.json",
+      "type": "object",
+      "required": ["userId", "paymentId", "amount"],
+      "properties": {
+        "userId": { "type": "string" },
+        "paymentId": { "type": "string" },
+        "amount": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  ]
+}
