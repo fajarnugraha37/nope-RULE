@@ -1,6 +1,6 @@
-# Workflow Screening Engine (Bun + TypeScript)
+# Rule Engine (Bun + TypeScript)
 
-This repository implements a workflow/screening engine with human-in-the-loop, event waits, and barrier fan-in using Bun 1.1+ and strict TypeScript.
+This repository implements a Rule engine with human-in-the-loop, event waits, and barrier fan-in using Bun 1.1+ and strict TypeScript.
 
 ## Quickstart
 - copy `.env.example` -> `.env` and adjust as needed
