@@ -8,7 +8,8 @@
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist",
     "lint": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "migrate": "bun run src/sql/migrate.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",

@@ -1,4 +1,4 @@
-version: "3.9"
+version: \"3.9\"
 
 services:
   app:
@@ -6,10 +6,12 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ""
-      PORT: ""
+      DATABASE_URL: \"\"
+      PORT: \"\"
+      RUN_MIGRATIONS_ON_BOOT: \"\"
+      MIGRATION_PATH: \"\"
     ports:
-      - ":3000"
+      - \":3000\"
     depends_on:
       db:
         condition: service_healthy
@@ -21,9 +23,9 @@ services:
       POSTGRES_USER: bun
       POSTGRES_PASSWORD: bun
     ports:
-      - "5432:5432"
+      - \"5432:5432\"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bun -d workflows"]
+      test: [\"CMD-SHELL\", \"pg_isready -U bun -d workflows\"]
       interval: 5s
       timeout: 3s
       retries: 5

@@ -35,7 +35,7 @@ clean:
 	$(DOCKER_COMPOSE) down -v --remove-orphans
 
 migrate:
-	$(DOCKER_COMPOSE) exec db psql -U bun -d workflows -f /docker-entrypoint-initdb.d/001_tables.sql
+	$(BUN) run src/sql/migrate.ts
 
 db-shell:
 	$(DOCKER_COMPOSE) exec db psql -U bun -d workflows
