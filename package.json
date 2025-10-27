@@ -1,31 +1,31 @@
 {
-  "name": "nope-rule",
-  "module": "app/index.ts",
+  "name": "workflow-engine-bun",
+  "version": "0.1.0",
   "type": "module",
+  "module": "src/index.ts",
   "scripts": {
-    "compile": "bun build --compile --minify --sourcemap --bytecode ./app/index.ts",
-    "compile:windows": "bun run compile --target=bun-windows-x64 --outfile out/app-windows.exe",
-    "compile:linux": "bun run compile --target=bun-linux-x64 --outfile out/app-linux",
-    "compile:linux:arm": "bun run compile --target=bun-linux-arm64 --outfile out/app-linux-arm",
-    "compile:darwin": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin",
-    "compile:darwin:arm": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin-arm",
-    "compile:all": "bun run compile:windows && bun run compile:linux && bun run compile:linux:arm && bun run compile:darwin && bun run compile:darwin:arm",
-    "start": "bun run app/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "lint": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "ajv": "^8.17.1",
-    "ajv-errors": "^3.0.0",
     "ajv-formats": "^3.0.1",
-    "ajv-keywords": "^5.1.0",
-    "ajv-merge-patch": "^5.0.1",
     "hono": "^4.10.3",
-    "jsep": "^1.4.0",
-    "json-logic-engine": "^5.0.2"
+    "json-logic-js": "^2.0.5",
+    "postgres": "^3.4.3",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/json-schema": "^7.0.15",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
   }
 }

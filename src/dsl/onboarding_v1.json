@@ -1,0 +1,99 @@
+{
+  "name": "onboarding",
+  "version": "1.0.0",
+  "flows": {
+    "onboarding_v1": {
+      "name": "onboarding_v1",
+      "entry": "optional",
+      "nodes": [
+        {
+          "id": "optional",
+          "type": "EXPR",
+          "name": "Optional Human Form",
+          "expr": {
+            "var": "flags.optionalFormRequired"
+          }
+        },
+        {
+          "id": "submit",
+          "type": "HUMAN_FORM",
+          "name": "User form",
+          "formSchemaRef": "https://schemas.company/forms/onboarding-user.json",
+          "assignees": ["kyc-ops"]
+        },
+        {
+          "id": "pending_checks",
+          "type": "BARRIER",
+          "name": "Screening checks",
+          "barrier": {
+            "mode": "ALL",
+            "inputs": [
+              {
+                "topic": "check.kyc",
+                "schemaRef": "https://schemas.company/events/check-kyc.json",
+                "passExpr": { "==": [{ "var": "event.status" }, "PASS"] }
+              },
+              {
+                "topic": "check.sanction",
+                "schemaRef": "https://schemas.company/events/check-sanction.json",
+                "passExpr": { "==": [{ "var": "event.status" }, "PASS"] }
+              },
+              {
+                "topic": "check.device",
+                "schemaRef": "https://schemas.company/events/check-device.json",
+                "passExpr": { "==": [{ "var": "event.status" }, "PASS"] }
+              },
+              {
+                "topic": "check.credit",
+                "schemaRef": "https://schemas.company/events/check-credit.json",
+                "passExpr": { ">=": [{ "var": "event.score" }, 650] }
+              },
+              {
+                "topic": "check.risk",
+                "schemaRef": "https://schemas.company/events/check-risk.json",
+                "passExpr": { "in": [{ "var": "event.status" }, ["PASS", "REVIEW"]] }
+              }
+            ],
+            "correlateBy": "$.user.id",
+            "timeoutMs": 900000,
+            "onFail": "finish",
+            "emitMerged": true
+          }
+        },
+        {
+          "id": "entity_form",
+          "type": "HUMAN_FORM",
+          "name": "Entity details",
+          "formSchemaRef": "https://schemas.company/forms/entity.json",
+          "assignees": ["onboarding-ops"]
+        },
+        {
+          "id": "payment_wait",
+          "type": "WAIT_EVENT",
+          "name": "Await first payment",
+          "topic": "payment.confirmed",
+          "correlateBy": "$.user.id",
+          "schemaRef": "https://schemas.company/events/payment-confirmed.json",
+          "timeoutMs": 1800000,
+          "onTimeout": "finish"
+        },
+        {
+          "id": "finish",
+          "type": "MERGE",
+          "name": "Finish",
+          "sources": ["pending_checks", "entity_form", "payment_wait"]
+        }
+      ],
+      "edges": [
+        { "from": "optional", "to": "submit", "on": "TRUE" },
+        { "from": "optional", "to": "pending_checks", "on": "FALSE" },
+        { "from": "submit", "to": "pending_checks", "on": "SUBMIT" },
+        { "from": "pending_checks", "to": "entity_form", "on": "PASS" },
+        { "from": "pending_checks", "to": "finish", "on": "FAIL" },
+        { "from": "entity_form", "to": "payment_wait", "on": "SUBMIT" },
+        { "from": "payment_wait", "to": "finish", "on": "EVENT" },
+        { "from": "payment_wait", "to": "finish", "on": "TIMEOUT" }
+      ]
+    }
+  }
+}
