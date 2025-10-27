@@ -1,4 +1,3 @@
-import { serve } from 'hono/bun';
 import { Hono } from 'hono';
 import ruleSet from './dsl/onboarding_v1.json' assert { type: 'json' };
 import { EngineManager } from './engine/engine';
@@ -11,10 +10,10 @@ registerRoutes(app, engine);
 
 const port = Number(process.env.PORT ?? 3000);
 
-serve({
-  fetch: app.fetch,
-  port
-});
+export default { 
+  port: port, 
+  fetch: app.fetch, 
+} 
 
 setInterval(() => {
   engine.processTimeouts().catch((err) => console.error('Timeout sweep error', err));
