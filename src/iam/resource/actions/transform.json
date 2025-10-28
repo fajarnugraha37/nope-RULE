@@ -1,0 +1,185 @@
+{
+  "associateconnectorresource": {
+    "name": "AssociateConnectorResource",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke AssociateConnectorResource on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "createprofile": {
+    "name": "CreateProfile",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke CreateProfile on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "profile",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "deleteconnector": {
+    "name": "DeleteConnector",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke DeleteConnector on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "deleteprofile": {
+    "name": "DeleteProfile",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke DeleteProfile on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "profile",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "getconnector": {
+    "name": "GetConnector",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke GetConnector on AWS Transform",
+    "accessLevel": "Read",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "listconnectors": {
+    "name": "ListConnectors",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke ListConnectors on AWS Transform",
+    "accessLevel": "List",
+    "resourceTypes": [],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "listprofiles": {
+    "name": "ListProfiles",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke ListProfiles on AWS Transform",
+    "accessLevel": "List",
+    "resourceTypes": [],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "listtagsforresource": {
+    "name": "ListTagsForResource",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke ListTagsForResource on AWS Transform",
+    "accessLevel": "Read",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "rejectconnector": {
+    "name": "RejectConnector",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke RejectConnector on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  },
+  "tagresource": {
+    "name": "TagResource",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke TagResource on AWS Transform",
+    "accessLevel": "Tagging",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [
+      "aws:TagKeys",
+      "aws:RequestTag/${TagKey}"
+    ],
+    "dependentActions": []
+  },
+  "untagresource": {
+    "name": "UntagResource",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke UntagResource on AWS Transform",
+    "accessLevel": "Tagging",
+    "resourceTypes": [
+      {
+        "name": "connector",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [
+      "aws:TagKeys"
+    ],
+    "dependentActions": []
+  },
+  "updateprofile": {
+    "name": "UpdateProfile",
+    "isPermissionOnly": true,
+    "description": "Grants permission to invoke UpdateProfile on AWS Transform",
+    "accessLevel": "Write",
+    "resourceTypes": [
+      {
+        "name": "profile",
+        "required": true,
+        "conditionKeys": [],
+        "dependentActions": []
+      }
+    ],
+    "conditionKeys": [],
+    "dependentActions": []
+  }
+}

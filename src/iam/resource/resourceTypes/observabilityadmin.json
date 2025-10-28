@@ -1,0 +1,23 @@
+{
+  "telemetry-rule": {
+    "key": "telemetry-rule",
+    "arn": "arn:${Partition}:observabilityadmin:${Region}:${Account}:telemetry-rule/${TelemetryRuleName}",
+    "conditionKeys": [
+      "aws:ResourceTag/${TagKey}"
+    ]
+  },
+  "organization-telemetry-rule": {
+    "key": "organization-telemetry-rule",
+    "arn": "arn:${Partition}:observabilityadmin:${Region}:${Account}:organization-telemetry-rule/${TelemetryRuleName}",
+    "conditionKeys": [
+      "aws:ResourceTag/${TagKey}"
+    ]
+  },
+  "organization-centralization-rule": {
+    "key": "organization-centralization-rule",
+    "arn": "arn:${Partition}:observabilityadmin:${Region}:${Account}:organization-centralization-rule/${CentralizationRuleName}",
+    "conditionKeys": [
+      "aws:ResourceTag/${TagKey}"
+    ]
+  }
+}
