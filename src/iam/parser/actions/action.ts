@@ -1,4 +1,4 @@
-import { isAllWildcards } from "../../utils";
+import { isAllWildcards } from "../../../utils";
 import type {
   Action,
   ActionType,

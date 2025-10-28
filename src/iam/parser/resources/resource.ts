@@ -1,4 +1,4 @@
-import { isAllWildcards } from "../../utils";
+import { isAllWildcards } from "../../../utils";
 import type { ArnResource, Resource } from "./resource.interface";
 
 export class ResourceImpl implements Resource, ArnResource {

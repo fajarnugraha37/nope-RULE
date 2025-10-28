@@ -14,7 +14,7 @@ import type {
   PrincipalStatement,
   ResourceStatement,
   Statement,
-} from "./statement.interface";
+} from "./statement.interface.js";
 
 /**
  * Implementation of the Statement interface and all its sub-interfaces
