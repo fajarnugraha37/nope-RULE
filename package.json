@@ -32,11 +32,11 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "bun run build:clean && bun run build:cjs && bun run build:esm && bun run build:package-json && bash ./postbuild.sh",
+    "build": "bun run build:clean && bun run build:cjs && bun run build:esm && bash ./postbuild.sh",
+    "build:win": "bun run build:clean && bun run build:cjs && bun run build:esm && powershell -ExecutionPolicy Bypass -File ./postbuild.ps1",
     "build:clean": "rimraf dist",
     "build:cjs": "bunx tsc -p tsconfig.cjs.json",
     "build:esm": "bunx tsc -p tsconfig.esm.json",
-    "build:package-json": "echo {\\\"type\\\":\\\"commonjs\\\"} > dist/cjs/package.json && echo {\\\"type\\\":\\\"module\\\"} > dist/esm/package.json",
     "build:watch": "concurrently \"bunx tsc -p tsconfig.cjs.json --watch\" \"bunx tsc -p tsconfig.esm.json --watch\"",
     "lint": "bunx tsc --noEmit",
     "test": "bun test"
