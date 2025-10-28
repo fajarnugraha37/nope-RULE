@@ -1,35 +1,45 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "module": "commonjs",
+    "target": "es2022",
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
     "strict": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
-    "noFallthroughCasesInSwitch": true,
-    "useUnknownInCatchVariables": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
+    "lib": [
+      "es2023",
+      "DOM"
+    ],
     "types": [
       "bun-types"
     ],
-    "declaration": true,
-    "declarationMap": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "emitDeclarationOnly": false,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "noEmitOnError": false,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "sourceMap": true
+    "verbatimModuleSyntax": false
   },
   "exclude": [
     "node_modules",
-    "test",
     "dist",
+    "tests",
+    "test",
+    "bin"
   ],
   "include": [
     "src",

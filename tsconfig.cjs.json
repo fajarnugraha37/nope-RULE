@@ -1,37 +1,13 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "strict": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
-    "noFallthroughCasesInSwitch": true,
-    "useUnknownInCatchVariables": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": false,
-    "skipLibCheck": true,
-    "outDir": "dist/cjs",
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": false,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "noEmitOnError": false,
-    "isolatedModules": true,
-    "sourceMap": true,
-    "types": ["bun-types"]
-  },
-  "exclude": [
-    "node_modules",
-    "test",
-    "dist"
-  ],
-  "include": [
-    "src",
-    "bunfig.toml",
-    "package.json"
-  ]
+    "extends": "./tsconfig.json",
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "**/*.test.ts"
+    ],
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist/cjs",
+    }
 }

@@ -5,8 +5,8 @@
   "license": "MIT",
   "type": "module",
   "main": "dist/cjs/index.js",
+  "types": "dist/cjs/index.d.ts",
   "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
   "exports": {
     ".": {
       "node": {
@@ -30,24 +30,16 @@
     "LICENSE"
   ],
   "scripts": {
-    "compile": "bun build --compile --minify --sourcemap --bytecode ./app/index.ts",
-    "compile:windows": "bun run compile --target=bun-windows-x64 --outfile out/app-windows.exe",
-    "compile:linux": "bun run compile --target=bun-linux-x64 --outfile out/app-linux",
-    "compile:linux:arm": "bun run compile --target=bun-linux-arm64 --outfile out/app-linux-arm",
-    "compile:darwin": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin",
-    "compile:darwin:arm": "bun run compile --target=bun-darwin-arm64 --outfile out/app-darwin-arm",
-    "compile:all": "bun run compile:windows && bun run compile:linux && bun run compile:linux:arm && bun run compile:darwin && bun run compile:darwin:arm",
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
     "build": "bun run build:clean && bun run build:cjs && bun run build:esm && bun run build:package-json",
     "build:clean": "rimraf dist",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json", 
-    "build:package-json": "echo {\\\"type\\\":\\\"commonjs\\\"} > dist/cjs/package.json",
+    "build:package-json": "echo {\\\"type\\\":\\\"commonjs\\\"} > dist/cjs/package.json && echo {\\\"type\\\":\\\"module\\\"} > dist/esm/package.json",
     "build:watch": "concurrently \"tsc -p tsconfig.cjs.json --watch\" \"tsc -p tsconfig.esm.json --watch\"",
     "lint": "tsc --noEmit",
-    "test": "bun test",
-    "migrate": "bun run src/sql/migrate.ts"
+    "test": "bun test"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.11",
