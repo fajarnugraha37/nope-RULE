@@ -1,4 +1,4 @@
-import { Policy, PolicyImpl } from "./policies";
+import { type Policy, PolicyImpl } from "./policies";
 
 /**
  * Load a Policy from a policy document
