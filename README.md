@@ -83,6 +83,43 @@ curl :3000/instances/<instanceId>
 - `make migrate` executes the Bun migration runner against the configured backend.
 - `make clean` tears down containers and volumes; `make docker-build` produces a production image via the included `Dockerfile`.
 
+## Building for Distribution
+
+This package builds both CommonJS and ES Modules with TypeScript definitions:
+
+- **Build**: `bun run build` - Creates both CJS and ESM builds with type definitions
+- **Watch mode**: `bun run build:watch` - Continuously builds both formats during development
+- **Clean**: `bun run build:clean` - Removes the dist folder
+
+### Package Structure
+
+The built package supports both module systems:
+
+```bash
+dist/
+├── cjs/          # CommonJS build
+│   ├── package.json  # {"type":"commonjs"}
+│   └── src/
+│       ├── index.js
+│       ├── index.d.ts
+│       └── ...
+└── esm/          # ES Modules build
+    └── src/
+        ├── index.js
+        ├── index.d.ts
+        └── ...
+```
+
+### Usage
+
+```javascript
+// CommonJS
+const { main } = require('nope-rule');
+
+// ES Modules
+import { main } from 'nope-rule';
+```
+
 ## Tests
 - `bun test` using Bun's native test runner.
 
