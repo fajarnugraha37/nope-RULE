@@ -1,6 +1,9 @@
-# PowerShell script to copy non-TS/JS files from src to dist directories
-# Usage: .\copy-files.ps1
+# PowerShell postbuild script
+# Copy non-TS/JS files and create proper package.json files
 
+Write-Host "Running postbuild tasks..." -ForegroundColor Cyan
+
+# Copy non-TS/JS files
 Write-Host "Copying non-TS/JS files from src to dist directories..."
 
 # Create destination directories
@@ -32,8 +35,42 @@ foreach ($file in $sourceFiles) {
     # Copy files
     Copy-Item $file.FullName $cjsDestination -Force
     Copy-Item $file.FullName $esmDestination -Force
-    
-    Write-Host "✓ Copied: $relativePath"
 }
 
-Write-Host "✅ Finished copying non-TS/JS files to dist/cjs and dist/esm" -ForegroundColor Green
+Write-Host "✅ Copied non-TS/JS files to dist/cjs and dist/esm" -ForegroundColor Green
+
+# Read package.json metadata
+$packageJson = Get-Content "package.json" | ConvertFrom-Json
+$packageName = $packageJson.name
+$packageVersion = $packageJson.version
+$packageAuthor = $packageJson.author
+$packageLicense = $packageJson.license
+
+# Create package.json for CommonJS build
+Write-Host "Creating package.json for CommonJS build..."
+$cjsPackage = @{
+    name = $packageName
+    version = $packageVersion
+    author = $packageAuthor
+    license = $packageLicense
+    type = "commonjs"
+    main = "index.js"
+    types = "index.d.ts"
+}
+$cjsPackage | ConvertTo-Json -Depth 3 | Set-Content "dist\cjs\package.json"
+
+# Create package.json for ES Module build
+Write-Host "Creating package.json for ES Module build..."
+$esmPackage = @{
+    name = $packageName
+    version = $packageVersion
+    author = $packageAuthor
+    license = $packageLicense
+    type = "module"
+    main = "index.js"
+    types = "index.d.ts"
+}
+$esmPackage | ConvertTo-Json -Depth 3 | Set-Content "dist\esm\package.json"
+
+Write-Host "✅ Created package.json files for both CJS and ESM builds" -ForegroundColor Green
+Write-Host "✅ Postbuild tasks completed successfully!" -ForegroundColor Green
