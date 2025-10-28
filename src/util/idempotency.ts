@@ -8,7 +8,10 @@ interface Entry<T> {
 export class IdempotencyCache<T> {
   private store = new Map<string, Entry<T>>();
 
-  async execute(key: string | undefined, compute: () => Promise<T>): Promise<T> {
+  async execute(
+    key: string | undefined,
+    compute: () => Promise<T>
+  ): Promise<T> {
     if (!key) {
       return compute();
     }
