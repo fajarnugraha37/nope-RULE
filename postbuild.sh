@@ -9,28 +9,39 @@ shopt -s extglob globstar
 # Create destination directories
 mkdir -p dist/cjs dist/esm
 
-# Method 1: Using rsync (recommended if available)
-if command -v rsync >/dev/null 2>&1; then
-    echo "Using rsync to copy non-TS/JS files..."
-    rsync -av --exclude="*.ts" --exclude="*.js" --exclude="*.tsx" --exclude="*.jsx" src/ dist/cjs/
-    rsync -av --exclude="*.ts" --exclude="*.js" --exclude="*.tsx" --exclude="*.jsx" src/ dist/esm/
+# Fast copy method optimized for Windows
+echo "Copying non-TS/JS files (optimized for Windows)..."
+
+# Create a temporary list of files to copy
+temp_file_list=$(mktemp)
+find src -type f \! -name "*.ts" \! -name "*.js" \! -name "*.tsx" \! -name "*.jsx" > "$temp_file_list"
+
+if [ -s "$temp_file_list" ]; then
+    # Copy files in parallel using xargs for speed
+    cat "$temp_file_list" | while IFS= read -r file; do
+        rel_path="${file#src/}"
+        target_dir_cjs="dist/cjs/$(dirname "$rel_path")"
+        target_dir_esm="dist/esm/$(dirname "$rel_path")"
+        
+        # Create directories only if they don't exist
+        [ ! -d "$target_dir_cjs" ] && mkdir -p "$target_dir_cjs"
+        [ ! -d "$target_dir_esm" ] && mkdir -p "$target_dir_esm"
+        
+        # Copy files
+        cp "$file" "dist/cjs/$rel_path" &
+        cp "$file" "dist/esm/$rel_path" &
+    done
+    
+    # Wait for all background copy operations to complete
+    wait
+    
+    echo "✓ Copied $(wc -l < "$temp_file_list") non-TS/JS files"
 else
-    # Method 2: Using find and cp (fallback)
-    echo "Using find to copy non-TS/JS files..."
-    
-    # Copy directory structure first
-    find src -type d -exec mkdir -p dist/cjs/{} \; 2>/dev/null
-    find src -type d -exec mkdir -p dist/esm/{} \; 2>/dev/null
-    
-    # Copy non-TS/JS files
-    find src -type f \! -name "*.ts" \! -name "*.js" \! -name "*.tsx" \! -name "*.jsx" -exec sh -c '
-        for file; do
-            rel_path="${file#src/}"
-            cp "$file" "dist/cjs/$rel_path"
-            cp "$file" "dist/esm/$rel_path"
-        done
-    ' _ {} +
+    echo "✓ No non-TS/JS files found to copy"
 fi
+
+# Clean up
+rm -f "$temp_file_list"
 
 echo "✅ Copied non-TS/JS files to dist/cjs and dist/esm"
 
