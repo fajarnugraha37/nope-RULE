@@ -1,8 +1,34 @@
 {
   "name": "nope-rule",
   "version": "0.1.0",
+  "author": "Fajar Nugraha <fajarnugraha37@gmail.com>",
+  "license": "MIT",
   "type": "module",
-  "module": "src/index.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist/cjs",
+    "dist/esm",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "compile": "bun build --compile --minify --sourcemap --bytecode ./app/index.ts",
     "compile:windows": "bun run compile --target=bun-windows-x64 --outfile out/app-windows.exe",
@@ -13,7 +39,12 @@
     "compile:all": "bun run compile:windows && bun run compile:linux && bun run compile:linux:arm && bun run compile:darwin && bun run compile:darwin:arm",
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist",
+    "build": "bun run build:clean && bun run build:cjs && bun run build:esm && bun run build:package-json",
+    "build:clean": "rimraf dist",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json", 
+    "build:package-json": "echo {\\\"type\\\":\\\"commonjs\\\"} > dist/cjs/package.json",
+    "build:watch": "concurrently \"tsc -p tsconfig.cjs.json --watch\" \"tsc -p tsconfig.esm.json --watch\"",
     "lint": "tsc --noEmit",
     "test": "bun test",
     "migrate": "bun run src/sql/migrate.ts"
@@ -28,7 +59,6 @@
     "json-logic-js": "^2.0.5",
     "json-schema": "^0.4.0",
     "postgres": "^3.4.7",
-    "uid": "^2.0.2",
     "ulid": "^3.0.1",
     "zod": "^4.1.12"
   },
@@ -36,6 +66,8 @@
     "@types/bun": "latest",
     "@types/json-logic-js": "^2.0.8",
     "@types/json-schema": "^7.0.15",
+    "concurrently": "^9.1.0",
+    "rimraf": "^6.0.1",
     "typescript": "^5.6.3"
   },
   "engines": {

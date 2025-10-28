@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "strict": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
@@ -10,11 +10,9 @@
     "useUnknownInCatchVariables": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
+    "resolveJsonModule": false,
     "skipLibCheck": true,
-    "types": [
-      "bun-types"
-    ],
+    "outDir": "dist/cjs",
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
@@ -23,13 +21,13 @@
     "experimentalDecorators": true,
     "noEmitOnError": false,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["bun-types"]
   },
   "exclude": [
     "node_modules",
     "test",
-    "dist",
+    "dist"
   ],
   "include": [
     "src",
